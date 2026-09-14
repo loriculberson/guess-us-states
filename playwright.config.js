@@ -11,7 +11,7 @@ module.exports = defineConfig({
     },
     webServer: {
         command: 'python3 -m http.server 8791',
-        url: 'http://localhost:8791/leaflet.html',
+        url: 'http://localhost:8791/index.html',
         reuseExistingServer: !process.env.CI,
     },
 });
