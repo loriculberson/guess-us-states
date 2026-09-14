@@ -1,0 +1,8 @@
+Build a JavaScript front end game.
+The game will display a United States map of the 50 states borders using leaflet.js.
+When a user clicks within the borders of a state, an input field is rendered inside of the state. If the state is small like the east coast states, a line will draw itself from the the state to an empty area like the Atlantic ocean and open an input field on the Atlantic ocean. To register input, the user must press the Enter or Return key. 
+The user is able to type in the input field. What ever the user types is displayed in the input field.
+Once all of the states have a user input value, a submit button is rendered.
+When the user clicks the submit button the number of correctly identified states is displayed.
+The app will only display how many states are correct. It is up to the user to find and correct the errors.
+The user has unlimited attempts to get all of the states correctly identified. A correct value is either the state's abbreviation or the fill name of the state.
