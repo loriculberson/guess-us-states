@@ -14,7 +14,7 @@ test('input field grows as the map zooms in and shrinks as it zooms out', async 
     const widthZoomedIn = (await inputFor(page, 'Kansas').boundingBox()).width;
     expect(widthZoomedIn).toBeGreaterThan(widthAtDefaultZoom);
 
-    await setZoom(page, 3);
+    await setZoom(page, 2);
     const widthZoomedOut = (await inputFor(page, 'Kansas').boundingBox()).width;
     expect(widthZoomedOut).toBeLessThan(widthAtDefaultZoom);
 });

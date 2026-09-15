@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    var ABBREVIATIONS = {
+    const ABBREVIATIONS = {
         "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
         "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
         "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
@@ -19,7 +19,7 @@
 
     // States too small/crowded to hold an input on their own borders.
     // Each gets a callout box out in the Atlantic, connected by a line.
-    var CALLOUT_ANCHORS = {
+    const CALLOUT_ANCHORS = {
         "Vermont": [46.5, -63],
         "New Hampshire": [45.0, -63],
         "Massachusetts": [43.5, -63],
@@ -30,16 +30,74 @@
         "Maryland": [36.0, -63]
     };
 
-    var TOTAL_STATES = 50;
-    var MIN_ZOOM = 3;
+    const TOTAL_STATES = 50;
+    var MIN_ZOOM = 2;
     var MAX_ZOOM = 8;
 
     var map = L.map("map", {
-        minZoom: MIN_ZOOM,
-        maxZoom: MAX_ZOOM,
-        maxBounds: L.latLngBounds([[3, -180], [78, -40]]),
-        maxBoundsViscosity: 1.0
-    }).setView([40, -97], 4);
+        // minZoom: MIN_ZOOM,
+        // maxZoom: MAX_ZOOM,
+        // maxBounds: L.latLngBounds([[3, -180], [78, -40]]),
+        // maxBounds: L.latLngBounds([[3, -180], [78, -40]]),
+        // maxBoundsViscosity: 1.0
+    });
+
+    function featureBBox(geometry) {
+        var minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+        function walk(coords) {
+            if (typeof coords[0] === "number") {
+                if (coords[0] < minLon) minLon = coords[0];
+                if (coords[0] > maxLon) maxLon = coords[0];
+                if (coords[1] < minLat) minLat = coords[1];
+                if (coords[1] > maxLat) maxLat = coords[1];
+            } else {
+                coords.forEach(walk);
+            }
+        }
+        walk(geometry.coordinates);
+        return { minLon: minLon, maxLon: maxLon, minLat: minLat, maxLat: maxLat };
+    }
+
+    function transformCoordinates(coords, fn) {
+        if (typeof coords[0] === "number") return fn(coords);
+        return coords.map(function (c) { return transformCoordinates(c, fn); });
+    }
+
+    // Alaska's true position and size dwarf the other 48 states and sit far
+    // out of frame. Shrink it and dock it beside Hawaii - the inset
+    // convention used on most US maps - by rewriting its coordinates in
+    // place, so every downstream feature (centroid, click handling, input
+    // placement) treats the inset as Alaska's real geometry.
+    var insetBounds = null;
+    (function relocateAlaskaNextToHawaii() {
+        var features = window.US_STATES_GEOJSON.features;
+        var alaska = features.filter(function (f) { return f.properties.name === "Alaska"; })[0];
+        var hawaii = features.filter(function (f) { return f.properties.name === "Hawaii"; })[0];
+        if (!alaska || !hawaii) return;
+
+        var alaskaBBox = featureBBox(alaska.geometry);
+        var hawaiiBBox = featureBBox(hawaii.geometry);
+
+        var scale = 0.28;
+        var gap = 1;
+        var targetMinLon = hawaiiBBox.minLon;
+        var targetMaxLat = hawaiiBBox.minLat - gap;
+        var targetMinLat = targetMaxLat - (alaskaBBox.maxLat - alaskaBBox.minLat) * scale;
+
+        alaska.geometry.coordinates = transformCoordinates(alaska.geometry.coordinates, function (pt) {
+            return [
+                (pt[0] - alaskaBBox.minLon) * scale + targetMinLon,
+                (pt[1] - alaskaBBox.minLat) * scale + targetMinLat
+            ];
+        });
+
+        var alaskaNewBBox = featureBBox(alaska.geometry);
+        var padding = 1;
+        insetBounds = L.latLngBounds(
+            [Math.min(alaskaNewBBox.minLat, hawaiiBBox.minLat) - padding, Math.min(alaskaNewBBox.minLon, hawaiiBBox.minLon) - padding],
+            [Math.max(alaskaNewBBox.maxLat, hawaiiBBox.maxLat) + padding, Math.max(alaskaNewBBox.maxLon, hawaiiBBox.maxLon) + padding]
+        );
+    })();
 
     var baseStyle = {
         color: "#34495e",
@@ -263,6 +321,24 @@
             });
         }
     }).addTo(map);
+
+    // Fit to the actual state bounds rather than a fixed zoom level, so the
+    // whole map is framed correctly on any screen size (phone, tablet, desktop).
+    // This must run before adding any further vector layers below - Leaflet
+    // mishandles a Path added directly to the map (not part of a
+    // FeatureGroup) while the map still has no view.
+    var fitBoundsTarget = geoLayer.getBounds();
+    if (insetBounds) fitBoundsTarget.extend(insetBounds);
+    map.fitBounds(fitBoundsTarget, { padding: [12, 12] });
+
+    if (insetBounds) {
+        L.rectangle(insetBounds, {
+            color: "#34495e",
+            weight: 2,
+            fill: false,
+            interactive: false
+        }).addTo(map);
+    }
 
     map.on("zoomend", refreshMarkerIcons);
 

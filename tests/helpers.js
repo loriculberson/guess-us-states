@@ -80,7 +80,7 @@ async function installMapHook(page) {
 
 async function gotoGame(page) {
     await installMapHook(page);
-    await page.goto("/leaflet.html");
+    await page.goto("/index.html");
     await page.waitForSelector(".leaflet-interactive");
 }
 
