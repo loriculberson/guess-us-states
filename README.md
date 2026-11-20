@@ -6,7 +6,7 @@ Here's a little memory jogger game that will help you identify all 50 states.
 
 1. Click on a state.
 2. Enter the state name or abbreviation in the input field.
-3. Once you have all 50 states filled in, click the **Submit** button.
+3. Once you have all 50 states filled in, click the **Submit** button to see how many you got right.
 
 Visit: https://guess-us-states-l881.onrender.com
 
