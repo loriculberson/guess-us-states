@@ -5,52 +5,11 @@
 // patch L.map from the test side, before the page's own scripts run, so
 // tests can convert lat/lng to screen coordinates without touching app code.
 
-const ABBREVIATIONS = {
-    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
-    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
-    "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
-    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
-    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
-    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
-    "Missouri": "MO", "Montana": "MT", "Nebraska": "NE", "Nevada": "NV",
-    "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY",
-    "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
-    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
-    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
-    "Vermont": "VT", "Virginia": "VA", "Washington": "WA", "West Virginia": "WV",
-    "Wisconsin": "WI", "Wyoming": "WY"
-};
+const { ABBREVIATIONS } = require('../lib/game-logic');
 
-// Same area-weighted centroid formula as leaflet.js's featureCentroid, kept
-// in sync manually since it's duplicated for test-side use only.
+// lib/game-logic.js is loaded as a script in the page, so featureCentroid is
+// available as a global there. This function runs inside page.evaluate().
 function inPageCentroidScript() {
-    function ringAreaAndCentroid(ring) {
-        var area = 0, cx = 0, cy = 0;
-        for (var i = 0; i < ring.length - 1; i++) {
-            var x0 = ring[i][0], y0 = ring[i][1];
-            var x1 = ring[i + 1][0], y1 = ring[i + 1][1];
-            var cross = x0 * y1 - x1 * y0;
-            area += cross;
-            cx += (x0 + x1) * cross;
-            cy += (y0 + y1) * cross;
-        }
-        area = area / 2;
-        if (area === 0) return { area: 0, centroid: ring[0].slice().reverse() };
-        cx = cx / (6 * area);
-        cy = cy / (6 * area);
-        return { area: Math.abs(area), centroid: [cy, cx] };
-    }
-    function featureCentroid(geometry) {
-        var rings = geometry.type === "Polygon"
-            ? [geometry.coordinates[0]]
-            : geometry.coordinates.map(function (poly) { return poly[0]; });
-        var best = null;
-        rings.forEach(function (ring) {
-            var result = ringAreaAndCentroid(ring);
-            if (!best || result.area > best.area) best = result;
-        });
-        return best.centroid;
-    }
     var byName = {};
     window.US_STATES_GEOJSON.features.forEach(function (f) {
         byName[f.properties.name] = featureCentroid(f.geometry);
